@@ -33,7 +33,10 @@ src/
 ├── index.ts          # Package exports
 ├── VideoCall.tsx     # React component with TODO implementations
 └── useWebRTC.ts      # WebRTC hook with TODO implementations
-```
+
+
+
+### Use in another local React project
 
 Add to your project's `package.json`:
 
@@ -78,37 +81,67 @@ export function App() {
 
 Both `src/useWebRTC.ts` and `src/VideoCall.tsx` have TODO comments marking the areas that need WebRTC implementation. Start there to add the actual functionality.
 
-## Commit & Deploy
+## Publishing to npm
 
-### Create commit
+Before publishing, implement the WebRTC logic in the TODO sections.
 
-```bash
-git add .
-git commit -m "refactor: convert to WebRTC boilerplate template with TODO implementations
+### 1. Update version
 
-- Convert useWebRTC hook to template with documented implementation steps
-- Update VideoCall component with TODO markers and structure
-- Add video element refs and effect hooks for stream handling
-- Clean up documentation and focus on local development
-- Simplify README with clear development and testing instructions
-- Mark all implementation points with actionable TODO comments"
+Edit `package.json` and update the version:
+
+```json
+"version": "0.1.0"
 ```
 
-### Push to branch
+### 2. Build the package
 
 ```bash
-git push origin boilerplate
-```
-
-### How to run
-
-```bash
-# Install dependencies
-npm install
-
-# Development mode with hot reload
-npm run dev
-
-# Build for production
 npm run build
+```
+
+### 3. Publish to npm
+
+```bash
+npm publish --access public
+```
+
+Requires:
+- npm account
+- Logged in: `npm login`
+
+## Using after publishing
+
+Once published to npm, install in any React project:
+
+```bash
+npm install @intelehealth/webrtc
+```
+
+Then import and use:
+
+```tsx
+import { VideoCall } from "@intelehealth/webrtc";
+import { useState } from "react";
+
+export function MyApp() {
+  const [remoteSdp, setRemoteSdp] = useState<RTCSessionDescriptionInit>();
+  const [remoteCandidate, setRemoteCandidate] = useState<RTCIceCandidateInit>();
+
+  return (
+    <VideoCall
+      onCreateOffer={async (offer) => {
+        // Send offer to signaling server
+      }}
+      onCreateAnswer={async (answer) => {
+        // Send answer to signaling server
+      }}
+      onSendIceCandidate={(candidate) => {
+        // Send ICE candidate to signaling server
+      }}
+      remoteSdp={remoteSdp}
+      remoteIceCandidate={remoteCandidate}
+      onError={(error) => console.error(error)}
+    />
+  );
+}
 ```
