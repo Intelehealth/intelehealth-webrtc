@@ -1,6 +1,6 @@
 {
   "name": "@intelehealth/webrtc",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "WebRTC + Socket.IO call client and UI for Intelehealth",
   "type": "module",
   "main": "./dist/index.js",
