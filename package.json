@@ -1,0 +1,58 @@
+{
+  "name": "@intelehealth/webrtc",
+  "version": "0.0.2",
+  "description": "WebRTC + Socket.IO call client and UI for Intelehealth",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node ./scripts/copy-styles.mjs",
+    "dev": "node ./scripts/copy-styles.mjs && tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "webrtc",
+    "socket.io",
+    "intelehealth",
+    "telemedicine",
+    "video-call"
+  ],
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zeescriptdev/intelehealth-webrtc.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "livekit-client": "2.15.8",
+    "socket.io-client": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@types/socket.io-client": "^1.4.36",
+    "typescript": "~5.8.3"
+  }
+}

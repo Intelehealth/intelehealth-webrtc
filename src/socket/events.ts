@@ -1,0 +1,37 @@
+export const SOCKET_EVENTS = {
+  CALL: 'call',
+  CREATE_OR_JOIN_HW: 'create_or_join_hw',
+  BYE: 'bye',
+  CANCEL_HW: 'cancel_hw',
+  CANCEL_DR: 'cancel_dr',
+  CALL_CONNECTED: 'call-connected',
+  HW_CALL_REJECT: 'hw_call_reject',
+  DR_CALL_REJECT: 'dr_call_reject',
+  CALL_TIME_UP: 'call_time_up',
+  ACK_MSG_RECEIVED: 'ack_msg_received',
+  CREATE_OR_JOIN: 'create or join',
+  MESSAGE: 'message',
+  IPADDR: 'ipaddr',
+  GET_ADMIN_UNREAD_COUNT: 'getAdminUnreadCount',
+  GET_DR_UNREAD_COUNT: 'getDrUnreadCount',
+
+  ALL_USERS: 'allUsers',
+  INCOMING_CALL: 'incoming_call',
+  TOAST: 'toast',
+  CREATED: 'created',
+  JOINED: 'joined',
+  JOIN: 'join',
+  READY: 'ready',
+  FULL: 'full',
+  ADMIN_UNREAD_COUNT: 'adminUnreadCount',
+  DR_UNREAD_COUNT: 'drUnreadCount',
+  LOG: 'log',
+
+  CONNECT: 'connect',
+  DISCONNECT: 'disconnect',
+  CONNECT_ERROR: 'connect_error',
+  RECONNECT: 'reconnect',
+  ERROR: 'error',
+} as const;
+
+export type SocketEventName = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
