@@ -13,7 +13,7 @@ import { SignalingSocket } from '../socket/signaling-socket.js';
 import type { ConnectOptions } from '../socket/signaling-socket.js';
 import { CALL_STATUSES } from '../socket/types.js';
 import type { CallData, IncomingCallData, SocketUser } from '../socket/types.js';
-import CallRoom from './components/CallRoom.js';
+import CallRoom, { type CallEndInfo } from './components/CallRoom.js';
 import IncomingCallModal from './components/IncomingCallModal.js';
 import { useRingtone } from './useRingtone.js';
 import type {
@@ -43,7 +43,8 @@ export interface CallProviderConfig {
   ) => void;
   onEnd?: (
     call: IncomingCallPayload | undefined,
-    socket: SignalingSocket | null
+    socket: SignalingSocket | null,
+    info?: CallEndInfo
   ) => void;
 }
 
@@ -54,6 +55,7 @@ const defaultMapIncomingCall = (
   raw: IncomingCallData | CallData
 ): IncomingCallPayload => {
   const r = (raw ?? {}) as Record<string, unknown>;
+  const truthy = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1';
   return {
     callerName: String(r.doctorName ?? r.callerName ?? 'Unknown'),
     patientName: String(r.patientName ?? 'Unknown'),
@@ -63,6 +65,7 @@ const defaultMapIncomingCall = (
     roomId: toStr(r.roomId),
     doctorId: toStr(r.doctorId ?? r.connectToDrId),
     nurseId: toStr(r.nurseId),
+    autoJoin: truthy(r.autoJoin ?? r.isTurnServer),
     raw,
   };
 };
@@ -107,6 +110,7 @@ export const IncomingCallProvider = ({
   const incomingCallRef = useRef<IncomingCallPayload | null>(null);
   incomingCallRef.current = incomingCall;
   const lastRingRef = useRef<{ key: string; at: number }>({ key: '', at: 0 });
+  const autoJoinLockReleaseRef = useRef<(() => void) | null>(null);
   const DEDUPE_MS = 4000;
 
   useRingtone(isIncomingCallOpen, { enabled: ringtone, url: ringtoneUrl });
@@ -115,22 +119,61 @@ export const IncomingCallProvider = ({
     setIsIncomingCallOpen(false);
   }, []);
 
-  const showIncomingCall = useCallback((call: IncomingCallPayload) => {
-    if (isActiveCallOpenRef.current) return;
-    const key = call.roomId || call.visitId || '';
-    const now = Date.now();
-    if (
-      key &&
-      key === lastRingRef.current.key &&
-      now - lastRingRef.current.at < DEDUPE_MS
-    ) {
-      return;
-    }
-    lastRingRef.current = { key, at: now };
-    setIncomingCall(call);
-    setActiveCall(call);
-    setIsIncomingCallOpen(true);
-  }, []);
+  const openActiveCall = useCallback(
+    (call: IncomingCallPayload) => {
+      setIncomingCall(call);
+      setActiveCall(call);
+      setIsCallMinimized(false);
+      setIsActiveCallOpen(true);
+      onAccept?.(call, socketRef.current);
+    },
+    [onAccept]
+  );
+
+  const showIncomingCall = useCallback(
+    (call: IncomingCallPayload) => {
+      if (isActiveCallOpenRef.current) return;
+      const key = call.roomId || call.visitId || '';
+      const now = Date.now();
+      if (
+        key &&
+        key === lastRingRef.current.key &&
+        now - lastRingRef.current.at < DEDUPE_MS
+      ) {
+        return;
+      }
+      lastRingRef.current = { key, at: now };
+      if (call.autoJoin) {
+        const locks = (
+          navigator as unknown as {
+            locks?: {
+              request: (
+                name: string,
+                opts: { ifAvailable: boolean },
+                cb: (lock: unknown) => Promise<void> | undefined
+              ) => void;
+            };
+          }
+        ).locks;
+        if (!locks?.request) {
+          openActiveCall(call);
+          return;
+        }
+        locks.request(`ihrtc-call-${key}`, { ifAvailable: true }, lock => {
+          if (!lock) return undefined;
+          return new Promise<void>(resolve => {
+            autoJoinLockReleaseRef.current = resolve;
+            openActiveCall(call);
+          });
+        });
+        return;
+      }
+      setIncomingCall(call);
+      setActiveCall(call);
+      setIsIncomingCallOpen(true);
+    },
+    [onAccept, openActiveCall]
+  );
 
   const acceptIncomingCall = useCallback(() => {
     closeIncomingCall();
@@ -149,22 +192,27 @@ export const IncomingCallProvider = ({
     setActiveCall(null);
   }, [closeIncomingCall, incomingCall, onDecline]);
 
-  const endActiveCall = useCallback(() => {
-    const call = activeCall;
-    const socket = socketRef.current;
-    setIsActiveCallOpen(false);
-    setIsCallMinimized(false);
-    if (socket && call) {
-      socket.bye({
-        doctorId: call.doctorId,
-        nurseId: call.nurseId,
-        roomId: call.roomId,
-        socketId: socket.id,
-      });
-    }
-    onEnd?.(call ?? undefined, socket);
-    setActiveCall(null);
-  }, [activeCall, onEnd]);
+  const endActiveCall = useCallback(
+    (info?: CallEndInfo) => {
+      const call = activeCall;
+      const socket = socketRef.current;
+      autoJoinLockReleaseRef.current?.();
+      autoJoinLockReleaseRef.current = null;
+      setIsActiveCallOpen(false);
+      setIsCallMinimized(false);
+      if (socket && call) {
+        socket.bye({
+          doctorId: call.doctorId,
+          nurseId: call.nurseId,
+          roomId: call.roomId,
+          socketId: socket.id,
+        });
+      }
+      onEnd?.(call ?? undefined, socket, info);
+      setActiveCall(null);
+    },
+    [activeCall, onEnd]
+  );
 
   const minimizeCall = useCallback(() => setIsCallMinimized(true), []);
 
@@ -276,6 +324,7 @@ export const IncomingCallProvider = ({
         roomId: call?.roomId,
         doctorId: call?.doctorId,
         nurseId: call?.nurseId,
+        autoJoin: call?.autoJoin,
       });
     return () => {
       delete w.triggerIncomingCall;

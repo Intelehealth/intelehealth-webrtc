@@ -7,6 +7,7 @@ export interface IncomingCallPayload {
   roomId?: string;
   doctorId?: string;
   nurseId?: string;
+  autoJoin?: boolean;
   raw?: unknown;
 }
 

@@ -32,7 +32,15 @@ export { default as IncomingCallModal } from './react/components/IncomingCallMod
 export {
   default as CallRoom,
   type CallRoomProps,
+  type CallEndInfo,
+  type CallEndReason,
 } from './react/components/CallRoom.js';
+
+export {
+  default as PreJoinLobby,
+  type PreJoinLobbyProps,
+  type PreJoinDevices,
+} from './react/components/PreJoinLobby.js';
 
 export {
   AcceptCallIcon,
